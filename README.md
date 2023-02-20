@@ -1,5 +1,11 @@
 # Crazyflie Firmware  [![CI](https://github.com/bitcraze/crazyflie-firmware/workflows/CI/badge.svg)](https://github.com/bitcraze/crazyflie-firmware/actions?query=workflow%3ACI)
 
+This is a fork of the [original firmware](https://github.com/bitcraze/crazyflie-firmware) for Crazyflie, meant to be used by AIRLab at Lehigh University. Some changes (current and proposed) include:
+
+* Support for OpenMV as a deck (must be forced on via firmware config; deck name is `openmv`)
+* Customized AI deck support (we may use a custom classifier)
+* Enhanced tuning for the blimp
+
 This project contains the source code for the firmware used in the Crazyflie range of platforms, including the Crazyflie 2.X and the Roadrunner.
 
 ### Crazyflie 1.0 support
