@@ -69,7 +69,8 @@ const MotorPerifDef** motorMap;  /* Current map configuration */
 
 const uint32_t MOTORS[] = { MOTOR_M1, MOTOR_M2, MOTOR_M3, MOTOR_M4 };
 
-const uint16_t testsound[NBR_OF_MOTORS] = {A4, A5, F5, D5 };
+const uint16_t testsound[NBR_OF_MOTORS] = /*{A4, A5, F5, D5 }*/ {D4,D4,D5,A4};
+const uint16_t testtimes[NBR_OF_MOTORS] = {100,100,200,200};
 
 const MotorHealthTestDef brushedMotorHealthTestSettings = {
    .onPeriodMsec = HEALTH_BRUSHED_ON_PERIOD_MSEC,
@@ -319,7 +320,8 @@ bool motorsTest(void)
       motorsBeep(MOTORS[i], true, testsound[i], (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
       vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));
       motorsBeep(MOTORS[i], false, 0, 0);
-      vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
+      //vTaskDelay(M2T(MOTORS_TEST_DELAY_TIME_MS));
+      vTaskDelay(M2T(testtimes[i]));
 #else
       motorsSetRatio(MOTORS[i], MOTORS_TEST_RATIO);
       vTaskDelay(M2T(MOTORS_TEST_ON_TIME_MS));

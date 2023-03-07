@@ -359,4 +359,9 @@ const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id);
  */
 float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage);
 
+/**
+ * @brief This seriously needs to be in the official firmware's headers.
+ */
+void motorsPlayTone(uint16_t frequency, uint16_t duration_msec);
+
 #endif /* __MOTORS_H__ */
