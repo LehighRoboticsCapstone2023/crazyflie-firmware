@@ -52,13 +52,13 @@ static void omvTimer(xTimerHandle timer)
     // find the sequence 0x6969, for synchronization
     do {
         do {
-            res = uart1GetDataWithTimeout(&buf[0], 100);
+            res = uart1GetDataWithTimeout(&buf[0], M2T(100));
             if (!res) {
                 DEBUG_PRINT("OMV: connection timed out (signature, first byte)\n");
                 return;
             }
         } while (buf[0] != 0x69);
-        res = uart1GetDataWithTimeout(&buf[1], 100);
+        res = uart1GetDataWithTimeout(&buf[1], M2T(100));
         if (!res) {
             DEBUG_PRINT("OMV: connection timed out (signature, second byte)\n");
             return;
@@ -66,7 +66,7 @@ static void omvTimer(xTimerHandle timer)
     } while (buf[1] != 0x69);
     // read remaining bytes
     for (int i = 2; i < sizeof(buf); i++) {
-        res = uart1GetDataWithTimeout(&buf[i], 100);
+        res = uart1GetDataWithTimeout(&buf[i], M2T(100));
         if (!res) {
             DEBUG_PRINT("OMV: connection timed out\n");
             return;
@@ -108,7 +108,7 @@ static void omvInit()
         return;
     }
 
-    timer = xTimerCreate("omvTimer", M2T(200), pdTRUE, NULL, omvTimer);
+    timer = xTimerCreate("omvTimer", M2T(100), pdTRUE, NULL, omvTimer);
     xTimerStart(timer, 100);
 
     isInit = true;

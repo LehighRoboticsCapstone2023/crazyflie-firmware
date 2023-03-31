@@ -43,6 +43,8 @@ We added the following:
 #include "controller_mellinger.h"
 #include "physicalConstants.h"
 
+#include "openmv.h"
+
 // Global state variable used in the
 // firmware as the only instance and in bindings
 // to hold the default values
