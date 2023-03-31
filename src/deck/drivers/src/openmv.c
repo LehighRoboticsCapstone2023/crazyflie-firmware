@@ -1,4 +1,8 @@
+/* Copyright (C) 2023 Michael Fitzgerald */
+
 #define DEBUG_MODULE "OpenMV"
+
+#include "openmv.h"
 
 #include "debug.h"
 #include "stm32fxxx.h"
@@ -16,52 +20,22 @@
 #define OMV_PIN_IN UART1_GPIO_RX_PIN
 #define OMV_PIN_OUT UART1_GPIO_TX_PIN
 
+openmv_state_t openmv_state;
+
 static bool isInit = false;
 static xTimerHandle timer;
 
-/*static void setHoverSetpoint(setpoint_t* setpoint, float z)
+static void omvSetState(uint8_t target_x_byte,
+                        uint8_t target_y_byte,
+                        uint8_t target_z_byte)
 {
-    setpoint->mode.z = modeVelocity;
-    setpoint->position.z = 0;
-    setpoint->mode.yaw = modeVelocity;
-    setpoint->attitudeRate.yaw = 0;
-    setpoint->mode.x = modeVelocity;
-    setpoint->mode.y = modeVelocity;
-    setpoint->velocity.x = 0;
-    setpoint->velocity.y = 0;
-    setpoint->velocity.z = z;
-    setpoint->velocity_body = true;
-}*/
-
-// uint16_t freqLookup(uint16_t in)
-// {
-
-// }
-
-void omvSetMotorSpeed(uint8_t z)
-{
-    //float new_val = 100.0f * ((float) z) / 255.0f;
-    //DEBUG_PRINT("New Z vel: %f\n", (double) new_val);
-
-    //setpoint_t setpoint;
-    //memset(&setpoint, 0, sizeof(setpoint_t));
-    //setHoverSetpoint(&setpoint, new_val);
-    //commanderSetSetpoint(&setpoint, 3);
-
-    uint16_t freq = (uint16_t) (440.0 * pow(2, ((double)z-1) / 12.0));
-    if (z > 0) {
-        DEBUG_PRINT("Freq: %d\n", (unsigned int) freq);
-        motorsBeep(MOTOR_M1, true, freq, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / A4)/ 20);
-        vTaskDelay(M2T(EIGHTS));
-        //motorsBeep(MOTOR_M2, true, freq, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / freq)/ 20);
-        //motorsBeep(MOTOR_M3, true, freq, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / freq)/ 20);
-        //motorsBeep(MOTOR_M4, true, freq, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / freq)/ 20);
-    } else {
-        //motorsBeep(MOTOR_M1, false, freq, (uint16_t)(MOTORS_TIM_BEEP_CLK_FREQ / freq)/ 20);
-        //motorsBeep(MOTOR_M2, false, 0, 0);
-        //motorsBeep(MOTOR_M3, false, 0, 0);
-        //motorsBeep(MOTOR_M4, false, 0, 0);
-    }
+    memcpy(&openmv_state.target_x, &target_x_byte, 1);
+    memcpy(&openmv_state.target_y, &target_y_byte, 1);
+    memcpy(&openmv_state.target_z, &target_z_byte, 1);
+    DEBUG_PRINT("OpenMV target: (%d, %d, %d)\n",
+                (int)openmv_state.target_x,
+                (int)openmv_state.target_y,
+                (unsigned int)openmv_state.target_z);
 }
 
 static void omvTimer(xTimerHandle timer)
@@ -73,16 +47,25 @@ static void omvTimer(xTimerHandle timer)
     // 2. get all 64 bytes, including start byte
     uint8_t buf[8];
     buf[0] = 0;
+    buf[1] = 0;
     bool res;
+    // find the sequence 0x6969, for synchronization
     do {
-        res = uart1GetDataWithTimeout(&buf[0], 100);
+        do {
+            res = uart1GetDataWithTimeout(&buf[0], 100);
+            if (!res) {
+                DEBUG_PRINT("OMV: connection timed out (signature, first byte)\n");
+                return;
+            }
+        } while (buf[0] != 0x69);
+        res = uart1GetDataWithTimeout(&buf[1], 100);
         if (!res) {
-            DEBUG_PRINT("OMV: connection timed out (first byte)\n");
+            DEBUG_PRINT("OMV: connection timed out (signature, second byte)\n");
             return;
         }
-    } while (buf[0] != 0x45);
-
-    for (int i = 1; i < sizeof(buf); i++) {
+    } while (buf[1] != 0x69);
+    // read remaining bytes
+    for (int i = 2; i < sizeof(buf); i++) {
         res = uart1GetDataWithTimeout(&buf[i], 100);
         if (!res) {
             DEBUG_PRINT("OMV: connection timed out\n");
@@ -91,12 +74,17 @@ static void omvTimer(xTimerHandle timer)
     }
 
     // parse message
-    switch (buf[1]) {
+    switch (buf[2]) {
     case 0: // pass
         break;
-    case 1: // set motor speed
-        DEBUG_PRINT("[%d, %d, %d]\n", buf[0], buf[1], buf[2]);
-        omvSetMotorSpeed(buf[2]);
+    case 1: // set target setpoint
+        //omvSetMotorSpeed(buf[2]);
+        openmv_state.active = buf[3];
+        if (buf[3]) {
+            omvSetState(buf[4], buf[5], buf[6]);
+        } else {
+            DEBUG_PRINT("(Skipping...)\n");
+        }
         break;
     default:
         break;
@@ -108,6 +96,9 @@ static void omvTimer(xTimerHandle timer)
 static void omvInit()
 {
     if (isInit) return;
+    
+    // clear state
+    memset(&openmv_state, 0, sizeof(openmv_state_t));
 
     // initialize UART1 comms
     //pinMode(OMV_PIN, INPUT);
