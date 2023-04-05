@@ -28,7 +28,9 @@ static xTimerHandle timer;
 
 void omvGetState(openmv_state_t* s)
 {
+    taskENTER_CRITICAL();
     *s = openmv_state;
+    taskEXIT_CRITICAL();
 }
 
 static void omvSetState(uint8_t target_x_byte,
