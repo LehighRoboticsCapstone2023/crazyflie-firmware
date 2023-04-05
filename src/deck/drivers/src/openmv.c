@@ -13,6 +13,7 @@
 #include "commander.h"
 #include "uart1.h"
 #include "motors.h"
+#include "semphr.h"
 
 #include <math.h>
 
@@ -25,13 +26,26 @@ openmv_state_t openmv_state;
 static bool isInit = false;
 static xTimerHandle timer;
 
+void omvGetState(openmv_state_t* s)
+{
+    *s = openmv_state;
+}
+
 static void omvSetState(uint8_t target_x_byte,
                         uint8_t target_y_byte,
                         uint8_t target_z_byte)
 {
-    memcpy(&openmv_state.target_x, &target_x_byte, 1);
-    memcpy(&openmv_state.target_y, &target_y_byte, 1);
-    memcpy(&openmv_state.target_z, &target_z_byte, 1);
+    taskENTER_CRITICAL();
+    {
+        // memcpy(&openmv_state.target_x, &target_x_byte, 1);
+        // memcpy(&openmv_state.target_y, &target_y_byte, 1);
+        // memcpy(&openmv_state.target_z, &target_z_byte, 1);
+
+        openmv_state.target_x = *(int8_t*) &target_x_byte;
+        openmv_state.target_y = *(int8_t*) &target_y_byte;
+        openmv_state.target_z = *(uint8_t*) &target_z_byte;
+    }
+    taskEXIT_CRITICAL();
     DEBUG_PRINT("OpenMV target: (%d, %d, %d)\n",
                 (int)openmv_state.target_x,
                 (int)openmv_state.target_y,
